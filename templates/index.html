@@ -1,0 +1,1174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Resume Analyzer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+  
+  <style>
+    :root {
+      --bg: #050508;
+      --bg-secondary: #0a0d12;
+      --fg: #e8eaed;
+      --fg-muted: #7a8599;
+      --accent: #00e5b8;
+      --accent-secondary: #f59e0b;
+      --accent-dim: rgba(0, 229, 184, 0.15);
+      --card: rgba(12, 16, 22, 0.85);
+      --border: rgba(122, 133, 153, 0.18);
+      --glow: rgba(0, 229, 184, 0.5);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      width: 100%;
+      min-height: 100vh;
+      font-family: 'Space Grotesk', sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      overflow-x: hidden;
+    }
+
+    #canvas-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+    }
+
+    .content-wrapper {
+      position: relative;
+      z-index: 10;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      perspective: 1200px;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 2.5rem;
+    }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      margin-bottom: 2rem;
+      opacity: 0;
+      transform: translateY(20px) scale(0.95);
+      animation: revealLogo 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.2s forwards;
+    }
+
+    @keyframes revealLogo {
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .logo-icon {
+      width: 52px;
+      height: 52px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 40px var(--glow), inset 0 1px 0 rgba(255,255,255,0.2);
+      position: relative;
+    }
+
+    .logo-icon::after {
+      content: '';
+      position: absolute;
+      inset: -2px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, var(--accent), transparent, var(--accent-secondary));
+      z-index: -1;
+      opacity: 0.5;
+      filter: blur(8px);
+    }
+
+    .logo-icon svg {
+      width: 26px;
+      height: 26px;
+      color: var(--bg);
+    }
+
+    .brand-name {
+      font-size: 1.375rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      color: var(--fg);
+    }
+
+    h1 {
+      font-size: clamp(2.75rem, 9vw, 5rem);
+      font-weight: 700;
+      line-height: 1.05;
+      margin-bottom: 1.25rem;
+      letter-spacing: -0.03em;
+    }
+
+    h1 .line {
+      display: block;
+      overflow: hidden;
+    }
+
+    h1 .word {
+      display: inline-block;
+      opacity: 0;
+      transform: translateY(100%);
+      animation: revealWord 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    h1 .line:nth-child(1) .word { animation-delay: 0.35s; }
+    h1 .line:nth-child(2) .word { animation-delay: 0.45s; }
+
+    @keyframes revealWord {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    h1 .highlight {
+      background: linear-gradient(90deg, var(--accent), var(--accent-secondary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .subtitle {
+      font-size: 1.125rem;
+      color: var(--fg-muted);
+      max-width: 480px;
+      line-height: 1.65;
+      margin: 0 auto;
+      opacity: 0;
+      transform: translateY(15px);
+      animation: fadeUp 0.7s ease 0.7s forwards;
+    }
+
+    @keyframes fadeUp {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .form-container {
+      width: 100%;
+      max-width: 540px;
+      opacity: 0;
+      transform: translateY(30px);
+      animation: fadeUp 0.8s ease 0.85s forwards;
+    }
+
+    .form-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 2.25rem;
+      backdrop-filter: blur(30px);
+      position: relative;
+      overflow: hidden;
+      transform-style: preserve-3d;
+      transition: transform 0.15s ease, box-shadow 0.3s ease;
+      will-change: transform;
+    }
+
+    .form-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 24px;
+      padding: 1px;
+      background: linear-gradient(135deg, rgba(0,229,184,0.3), transparent 50%, rgba(245,158,11,0.2));
+      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      pointer-events: none;
+    }
+
+    .form-card::after {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle at var(--mouse-x, 50%) var(--mouse-y, 50%), var(--accent-dim) 0%, transparent 50%);
+      opacity: 0;
+      transition: opacity 0.4s ease;
+      pointer-events: none;
+    }
+
+    .form-card:hover::after {
+      opacity: 1;
+    }
+
+    .form-card h2 {
+      font-size: 1.375rem;
+      font-weight: 600;
+      margin-bottom: 0.375rem;
+      letter-spacing: -0.01em;
+    }
+
+    .form-description {
+      color: var(--fg-muted);
+      font-size: 0.9375rem;
+      margin-bottom: 1.75rem;
+    }
+
+    .upload-zone {
+      position: relative;
+      border: 2px dashed var(--border);
+      border-radius: 16px;
+      padding: 2.5rem 2rem;
+      text-align: center;
+      transition: all 0.3s ease;
+      cursor: pointer;
+      background: rgba(0, 0, 0, 0.2);
+    }
+
+    .upload-zone:hover,
+    .upload-zone.dragover {
+      border-color: var(--accent);
+      background: var(--accent-dim);
+    }
+
+    .upload-zone.has-file {
+      border-color: var(--accent);
+      border-style: solid;
+      background: var(--accent-dim);
+    }
+
+    .upload-icon {
+      width: 60px;
+      height: 60px;
+      margin: 0 auto 1.25rem;
+      background: var(--bg-secondary);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s ease;
+      border: 1px solid var(--border);
+    }
+
+    .upload-zone:hover .upload-icon {
+      transform: scale(1.08);
+      background: var(--accent);
+      border-color: var(--accent);
+      box-shadow: 0 0 30px var(--glow);
+    }
+
+    .upload-icon svg {
+      width: 26px;
+      height: 26px;
+      color: var(--accent);
+      transition: color 0.3s ease;
+    }
+
+    .upload-zone:hover .upload-icon svg {
+      color: var(--bg);
+    }
+
+    .upload-text {
+      font-size: 0.9375rem;
+      margin-bottom: 0.375rem;
+    }
+
+    .upload-text strong {
+      color: var(--accent);
+      font-weight: 500;
+    }
+
+    .upload-hint {
+      font-size: 0.8125rem;
+      color: var(--fg-muted);
+    }
+
+    .file-info {
+      display: none;
+      align-items: center;
+      gap: 1rem;
+      padding: 1rem;
+      background: rgba(0, 229, 184, 0.1);
+      border-radius: 12px;
+      margin-top: 1rem;
+      border: 1px solid rgba(0, 229, 184, 0.2);
+      animation: fileAppear 0.4s ease forwards;
+    }
+
+    @keyframes fileAppear {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    .file-info.show {
+      display: flex;
+    }
+
+    .file-icon {
+      width: 44px;
+      height: 44px;
+      background: var(--accent);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .file-icon svg {
+      width: 22px;
+      height: 22px;
+      color: var(--bg);
+    }
+
+    .file-details {
+      flex: 1;
+      min-width: 0;
+      text-align: left;
+    }
+
+    .file-name {
+      font-weight: 500;
+      font-size: 0.9375rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .file-size {
+      font-size: 0.8125rem;
+      color: var(--fg-muted);
+    }
+
+    .file-remove {
+      width: 36px;
+      height: 36px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+    }
+
+    .file-remove:hover {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: var(--fg-muted);
+    }
+
+    .file-remove svg {
+      width: 18px;
+      height: 18px;
+      color: var(--fg-muted);
+    }
+
+    input[type="file"] {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    .features {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.75rem;
+      margin: 1.75rem 0;
+    }
+
+    .feature {
+      text-align: center;
+      padding: 1rem 0.75rem;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 12px;
+      border: 1px solid transparent;
+      transition: all 0.3s ease;
+    }
+
+    .feature:hover {
+      background: var(--accent-dim);
+      border-color: rgba(0, 229, 184, 0.2);
+    }
+
+    .feature-icon {
+      width: 40px;
+      height: 40px;
+      margin: 0 auto 0.625rem;
+      background: var(--bg-secondary);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s ease;
+    }
+
+    .feature:hover .feature-icon {
+      background: var(--accent);
+    }
+
+    .feature-icon svg {
+      width: 20px;
+      height: 20px;
+      color: var(--accent);
+      transition: color 0.3s ease;
+    }
+
+    .feature:hover .feature-icon svg {
+      color: var(--bg);
+    }
+
+    .feature-label {
+      font-size: 0.8125rem;
+      color: var(--fg-muted);
+      font-weight: 500;
+      transition: color 0.3s ease;
+    }
+
+    .feature:hover .feature-label {
+      color: var(--fg);
+    }
+
+    .submit-btn {
+      width: 100%;
+      padding: 1.125rem 2rem;
+      background: linear-gradient(135deg, var(--accent), #00c4a3);
+      border: none;
+      border-radius: 14px;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.0625rem;
+      font-weight: 600;
+      color: var(--bg);
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 20px var(--glow);
+    }
+
+    .submit-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 35px var(--glow);
+    }
+
+    .submit-btn:active {
+      transform: translateY(0) scale(0.98);
+    }
+
+    .submit-btn:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 3px;
+    }
+
+    .btn-content {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    .btn-content svg {
+      width: 20px;
+      height: 20px;
+      transition: transform 0.3s ease;
+    }
+
+    .submit-btn:hover .btn-content svg {
+      transform: translateX(4px);
+    }
+
+    .submit-btn::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
+      transform: translateX(-100%);
+      transition: transform 0.6s ease;
+    }
+
+    .submit-btn:hover::before {
+      transform: translateX(100%);
+    }
+
+    .footer-text {
+      text-align: center;
+      margin-top: 2rem;
+      font-size: 0.875rem;
+      color: var(--fg-muted);
+      opacity: 0;
+      animation: fadeUp 0.7s ease 1.1s forwards;
+    }
+
+    .footer-text a {
+      color: var(--accent);
+      text-decoration: none;
+      transition: opacity 0.2s ease;
+    }
+
+    .footer-text a:hover {
+      opacity: 0.8;
+    }
+
+    .floating-badge {
+      position: fixed;
+      top: 1.5rem;
+      right: 1.5rem;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      padding: 0.5rem 1rem;
+      font-size: 0.8125rem;
+      color: var(--fg-muted);
+      backdrop-filter: blur(10px);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      z-index: 100;
+      opacity: 0;
+      transform: translateY(-10px);
+      animation: fadeDown 0.6s ease 1.3s forwards;
+    }
+
+    @keyframes fadeDown {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--accent);
+      border-radius: 50%;
+      animation: pulse 2s ease-in-out infinite;
+      box-shadow: 0 0 10px var(--accent);
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.6; transform: scale(0.9); }
+    }
+
+    /* Scan line effect */
+    .scan-line {
+      position: absolute;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+      opacity: 0;
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    .form-card.scanning .scan-line {
+      opacity: 0.6;
+      animation: scan 1.5s ease-in-out;
+    }
+
+    @keyframes scan {
+      0% { top: 0; }
+      100% { top: 100%; }
+    }
+
+    /* Reduced motion */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+
+    /* Mobile responsive */
+    @media (max-width: 640px) {
+      .content-wrapper {
+        padding: 1.5rem;
+        padding-top: 5rem;
+      }
+
+      .form-card {
+        padding: 1.5rem;
+        border-radius: 20px;
+      }
+
+      .features {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+      }
+
+      .feature {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        text-align: left;
+        padding: 0.875rem 1rem;
+      }
+
+      .feature-icon {
+        margin: 0;
+        flex-shrink: 0;
+      }
+
+      .upload-zone {
+        padding: 2rem 1.5rem;
+      }
+
+      .floating-badge {
+        top: 1rem;
+        right: 1rem;
+        padding: 0.375rem 0.75rem;
+        font-size: 0.75rem;
+      }
+
+      h1 {
+        font-size: clamp(2.25rem, 10vw, 3rem);
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div id="canvas-container"></div>
+  
+  <div class="floating-badge">
+    <span class="status-dot"></span>
+    <span>AI-Powered Analysis</span>
+  </div>
+
+  <div class="content-wrapper">
+    <header class="header">
+      <div class="logo-container">
+        <div class="logo-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+        </div>
+        <span class="brand-name">ResumeAI</span>
+      </div>
+      <h1>
+        <span class="line"><span class="word">Analyze Your</span></span>
+        <span class="line"><span class="word highlight">Resume</span></span>
+      </h1>
+      <p class="subtitle">Get instant AI-powered insights to optimize your resume and land your dream job faster.</p>
+    </header>
+
+    <div class="form-container">
+      <div class="form-card" id="formCard">
+        <div class="scan-line"></div>
+        <h2>Upload Your Resume</h2>
+        <p class="form-description">We support PDF, DOC, and DOCX formats up to 10MB</p>
+        
+        <form method="POST" enctype="multipart/form-data" id="resumeForm">
+          <div class="upload-zone" id="uploadZone">
+            <div class="upload-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+              </svg>
+            </div>
+            <p class="upload-text"><strong>Click to upload</strong> or drag and drop</p>
+            <p class="upload-hint">PDF, DOC, DOCX (MAX 10MB)</p>
+            <input type="file" name="resume" id="fileInput" accept=".pdf,.doc,.docx" required>
+            
+            <div class="file-info" id="fileInfo">
+              <div class="file-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
+              <div class="file-details">
+                <div class="file-name" id="fileName">document.pdf</div>
+                <div class="file-size" id="fileSize">2.4 MB</div>
+              </div>
+              <button type="button" class="file-remove" id="fileRemove" aria-label="Remove file">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="features">
+            <div class="feature">
+              <div class="feature-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                </svg>
+              </div>
+              <span class="feature-label">ATS Score</span>
+            </div>
+            <div class="feature">
+              <div class="feature-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              </div>
+              <span class="feature-label">Instant Results</span>
+            </div>
+            <div class="feature">
+              <div class="feature-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+              </div>
+              <span class="feature-label">Secure & Private</span>
+            </div>
+          </div>
+
+          <button type="submit" class="submit-btn" id="submitBtn">
+            <span class="btn-content">
+              Analyze Resume
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+              </svg>
+            </span>
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <p class="footer-text">
+      Your data is encrypted and never stored. <a href="#">Learn more</a>
+    </p>
+  </div>
+
+  <script type="module">
+    import * as THREE from 'three';
+
+    // === DOM Elements ===
+    const container = document.getElementById('canvas-container');
+    const uploadZone = document.getElementById('uploadZone');
+    const fileInput = document.getElementById('fileInput');
+    const fileInfo = document.getElementById('fileInfo');
+    const fileName = document.getElementById('fileName');
+    const fileSize = document.getElementById('fileSize');
+    const fileRemove = document.getElementById('fileRemove');
+    const formCard = document.getElementById('formCard');
+    const submitBtn = document.getElementById('submitBtn');
+
+    // === Three.js Setup ===
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.z = 50;
+
+    const renderer = new THREE.WebGLRenderer({ 
+      antialias: true, 
+      alpha: true 
+    });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setClearColor(0x000000, 0);
+    container.appendChild(renderer.domElement);
+
+    // === Simplex Noise GLSL (inline) ===
+    const noiseGLSL = `
+      vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+      vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+      vec4 permute(vec4 x) { return mod289(((x*34.0)+1.0)*x); }
+      vec4 taylorInvSqrt(vec4 r) { return 1.79284291400159 - 0.85373472095314 * r; }
+      
+      float snoise(vec3 v) {
+        const vec2 C = vec2(1.0/6.0, 1.0/3.0);
+        const vec4 D = vec4(0.0, 0.5, 1.0, 2.0);
+        
+        vec3 i  = floor(v + dot(v, C.yyy));
+        vec3 x0 = v - i + dot(i, C.xxx);
+        
+        vec3 g = step(x0.yzx, x0.xyz);
+        vec3 l = 1.0 - g;
+        vec3 i1 = min(g.xyz, l.zxy);
+        vec3 i2 = max(g.xyz, l.zxy);
+        
+        vec3 x1 = x0 - i1 + C.xxx;
+        vec3 x2 = x0 - i2 + C.yyy;
+        vec3 x3 = x0 - D.yyy;
+        
+        i = mod289(i);
+        vec4 p = permute(permute(permute(
+                  i.z + vec4(0.0, i1.z, i2.z, 1.0))
+                + i.y + vec4(0.0, i1.y, i2.y, 1.0))
+                + i.x + vec4(0.0, i1.x, i2.x, 1.0));
+                
+        float n_ = 0.142857142857;
+        vec3 ns = n_ * D.wyz - D.xzx;
+        
+        vec4 j = p - 49.0 * floor(p * ns.z * ns.z);
+        
+        vec4 x_ = floor(j * ns.z);
+        vec4 y_ = floor(j - 7.0 * x_);
+        
+        vec4 x = x_ *ns.x + ns.yyyy;
+        vec4 y = y_ *ns.x + ns.yyyy;
+        vec4 h = 1.0 - abs(x) - abs(y);
+        
+        vec4 b0 = vec4(x.xy, y.xy);
+        vec4 b1 = vec4(x.zw, y.zw);
+        
+        vec4 s0 = floor(b0)*2.0 + 1.0;
+        vec4 s1 = floor(b1)*2.0 + 1.0;
+        vec4 sh = -step(h, vec4(0.0));
+        
+        vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy;
+        vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww;
+        
+        vec3 p0 = vec3(a0.xy, h.x);
+        vec3 p1 = vec3(a0.zw, h.y);
+        vec3 p2 = vec3(a1.xy, h.z);
+        vec3 p3 = vec3(a1.zw, h.w);
+        
+        vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2,p2), dot(p3,p3)));
+        p0 *= norm.x;
+        p1 *= norm.y;
+        p2 *= norm.z;
+        p3 *= norm.w;
+        
+        vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0);
+        m = m * m;
+        return 42.0 * dot(m*m, vec4(dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3)));
+      }
+    `;
+
+    // === Particle System ===
+    const particleCount = 600;
+    const particleGeometry = new THREE.BufferGeometry();
+    const positions = new Float32Array(particleCount * 3);
+    const randoms = new Float32Array(particleCount);
+    const sizes = new Float32Array(particleCount);
+
+    for (let i = 0; i < particleCount; i++) {
+      const i3 = i * 3;
+      const radius = Math.random() * 60 + 20;
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.acos(2 * Math.random() - 1);
+      
+      positions[i3] = radius * Math.sin(phi) * Math.cos(theta);
+      positions[i3 + 1] = radius * Math.sin(phi) * Math.sin(theta);
+      positions[i3 + 2] = radius * Math.cos(phi) - 30;
+      
+      randoms[i] = Math.random();
+      sizes[i] = Math.random() * 2.5 + 0.8;
+    }
+
+    particleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    particleGeometry.setAttribute('aRandom', new THREE.BufferAttribute(randoms, 1));
+    particleGeometry.setAttribute('aSize', new THREE.BufferAttribute(sizes, 1));
+
+    const particleMaterial = new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: { value: 0 },
+        uMouse: { value: new THREE.Vector2(0, 0) },
+        uPixelRatio: { value: Math.min(window.devicePixelRatio, 2) },
+        uIntensity: { value: 1.0 }
+      },
+      vertexShader: `
+        ${noiseGLSL}
+        
+        attribute float aRandom;
+        attribute float aSize;
+        
+        varying float vAlpha;
+        varying vec3 vColor;
+        
+        uniform float uTime;
+        uniform vec2 uMouse;
+        uniform float uPixelRatio;
+        uniform float uIntensity;
+        
+        void main() {
+          vec3 pos = position;
+          
+          float noise = snoise(vec4(pos * 0.02, uTime * 0.15)) * 8.0;
+          pos.x += noise;
+          pos.y += snoise(vec4(pos * 0.02 + 100.0, uTime * 0.12)) * 6.0;
+          pos.z += snoise(vec4(pos * 0.02 + 200.0, uTime * 0.1)) * 4.0;
+          
+          vec2 mouseInfluence = uMouse * 15.0;
+          float distToMouse = length(pos.xy - mouseInfluence);
+          float mouseEffect = smoothstep(40.0, 0.0, distToMouse) * 8.0;
+          pos.xy += normalize(pos.xy - mouseInfluence + 0.001) * mouseEffect;
+          
+          vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
+          gl_Position = projectionMatrix * mvPosition;
+          
+          float depth = -mvPosition.z;
+          vAlpha = smoothstep(100.0, 20.0, depth) * uIntensity;
+          
+          float colorMix = aRandom;
+          vec3 accent = vec3(0.0, 0.898, 0.722);
+          vec3 secondary = vec3(0.961, 0.62, 0.043);
+          vColor = mix(accent, secondary, colorMix);
+          
+          gl_PointSize = aSize * uPixelRatio * (45.0 / depth);
+        }
+      `,
+      fragmentShader: `
+        varying float vAlpha;
+        varying vec3 vColor;
+        
+        void main() {
+          vec2 center = gl_PointCoord - vec2(0.5);
+          float dist = length(center);
+          
+          if (dist > 0.5) discard;
+          
+          float glow = exp(-dist * 4.0);
+          float core = smoothstep(0.3, 0.0, dist);
+          
+          vec3 finalColor = vColor * (glow + core * 0.5);
+          float alpha = glow * vAlpha * 0.9;
+          
+          gl_FragColor = vec4(finalColor, alpha);
+        }
+      `,
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    });
+
+    const particles = new THREE.Points(particleGeometry, particleMaterial);
+    scene.add(particles);
+
+    // === Central Morphing Sphere ===
+    const sphereGeometry = new THREE.IcosahedronGeometry(12, 4);
+    const sphereMaterial = new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: { value: 0 },
+        uMouse: { value: new THREE.Vector2(0, 0) }
+      },
+      vertexShader: `
+        ${noiseGLSL}
+        
+        varying vec3 vNormal;
+        varying float vDisplacement;
+        
+        uniform float uTime;
+        uniform vec2 uMouse;
+        
+        void main() {
+          vNormal = normal;
+          
+          vec3 pos = position;
+          float displacement = snoise(vec4(pos * 0.15, uTime * 0.25)) * 2.5;
+          displacement += snoise(vec4(pos * 0.3, uTime * 0.4)) * 1.0;
+          pos += normal * displacement;
+          vDisplacement = displacement;
+          
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+        }
+      `,
+      fragmentShader: `
+        varying vec3 vNormal;
+        varying float vDisplacement;
+        
+        void main() {
+          float fresnel = pow(1.0 - abs(dot(vNormal, vec3(0.0, 0.0, 1.0))), 2.5);
+          
+          vec3 accent = vec3(0.0, 0.898, 0.722);
+          vec3 secondary = vec3(0.961, 0.62, 0.043);
+          vec3 color = mix(accent, secondary, vDisplacement * 0.2 + 0.3);
+          
+          float alpha = fresnel * 0.4 + 0.05;
+          
+          gl_FragColor = vec4(color, alpha);
+        }
+      `,
+      transparent: true,
+      wireframe: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    });
+
+    const centralSphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+    centralSphere.position.z = -20;
+    scene.add(centralSphere);
+
+    // === Orbital Rings ===
+    const rings = [];
+    for (let i = 0; i < 3; i++) {
+      const ringGeometry = new THREE.TorusGeometry(18 + i * 6, 0.15, 8, 100);
+      const ringMaterial = new THREE.MeshBasicMaterial({
+        color: i === 0 ? 0x00e5b8 : i === 1 ? 0xf59e0b : 0x7a8599,
+        transparent: true,
+        opacity: 0.2 - i * 0.05,
+        blending: THREE.AdditiveBlending
+      });
+      const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+      ring.position.z = -20;
+      ring.rotation.x = Math.PI * 0.5 + (Math.random() - 0.5) * 0.5;
+      ring.rotation.y = Math.random() * Math.PI;
+      ring.userData.speed = 0.1 + Math.random() * 0.1;
+      ring.userData.axis = Math.random() > 0.5 ? 'x' : 'y';
+      scene.add(ring);
+      rings.push(ring);
+    }
+
+    // === Mouse Tracking ===
+    const mouse = { x: 0, y: 0 };
+    const targetMouse = { x: 0, y: 0 };
+    const cardMouse = { x: 0, y: 0 };
+
+    document.addEventListener('mousemove', (e) => {
+      targetMouse.x = (e.clientX / window.innerWidth - 0.5) * 2;
+      targetMouse.y = -(e.clientY / window.innerHeight - 0.5) * 2;
+      
+      // Card spotlight
+      const rect = formCard.getBoundingClientRect();
+      const x = ((e.clientX - rect.left) / rect.width) * 100;
+      const y = ((e.clientY - rect.top) / rect.height) * 100;
+      formCard.style.setProperty('--mouse-x', x + '%');
+      formCard.style.setProperty('--mouse-y', y + '%');
+      
+      // Card tilt
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+      const rotateY = ((e.clientX - centerX) / (rect.width / 2)) * 5;
+      const rotateX = -((e.clientY - centerY) / (rect.height / 2)) * 5;
+      
+      if (!prefersReducedMotion) {
+        formCard.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+      }
+    });
+
+    formCard.addEventListener('mouseleave', () => {
+      formCard.style.transform = 'rotateX(0deg) rotateY(0deg)';
+    });
+
+    // === Reduced Motion Check ===
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    // === Animation Loop ===
+    let time = 0;
+    function animate() {
+      requestAnimationFrame(animate);
+      
+      time += 0.008;
+      
+      // Smooth mouse
+      mouse.x += (targetMouse.x - mouse.x) * 0.06;
+      mouse.y += (targetMouse.y - mouse.y) * 0.06;
+      
+      if (!prefersReducedMotion) {
+        particleMaterial.uniforms.uTime.value = time;
+        particleMaterial.uniforms.uMouse.value.set(mouse.x, mouse.y);
+        
+        sphereMaterial.uniforms.uTime.value = time;
+        sphereMaterial.uniforms.uMouse.value.set(mouse.x, mouse.y);
+        
+        particles.rotation.y = time * 0.03;
+        particles.rotation.x = Math.sin(time * 0.08) * 0.15;
+        
+        centralSphere.rotation.x = time * 0.08;
+        centralSphere.rotation.y = time * 0.12;
+        
+        rings.forEach((ring, i) => {
+          ring.rotation[ring.userData.axis] += ring.userData.speed * 0.01;
+        });
+      }
+      
+      renderer.render(scene, camera);
+    }
+
+    animate();
+
+    // === Resize Handler ===
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      particleMaterial.uniforms.uPixelRatio.value = Math.min(window.devicePixelRatio, 2);
+    });
+
+    // === File Upload Interactions ===
+    function showFileInfo(file) {
+      fileName.textContent = file.name;
+      fileSize.textContent = formatFileSize(file.size);
+      fileInfo.classList.add('show');
+      uploadZone.classList.add('has-file');
+      
+      // Trigger scanning animation
+      formCard.classList.add('scanning');
+      setTimeout(() => formCard.classList.remove('scanning'), 1500);
+    }
+
+    function formatFileSize(bytes) {
+      if (bytes === 0) return '0 Bytes';
+      const k = 1024;
+      const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) showFileInfo(file);
+    });
+
+    fileRemove.addEventListener('click', (e) => {
+      e.stopPropagation();
+      fileInput.value = '';
+      fileInfo.classList.remove('show');
+      uploadZone.classList.remove('has-file');
+    });
+
+    // Drag and drop
+    uploadZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      uploadZone.classList.add('dragover');
+    });
+
+    uploadZone.addEventListener('dragleave', () => {
+      uploadZone.classList.remove('dragover');
+    });
+
+    uploadZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadZone.classList.remove('dragover');
+      const file = e.dataTransfer.files[0];
+      if (file) {
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(file);
+        fileInput.files = dataTransfer.files;
+        showFileInfo(file);
+      }
+    });
+
+    // Form submission
+    document.getElementById('resumeForm').addEventListener('submit', () => {
+      submitBtn.innerHTML = '<span class="btn-content">Analyzing...</span>';
+      
+      // Intensify particles
+      particleMaterial.uniforms.uIntensity.value = 2.0;
+      setTimeout(() => {
+        particleMaterial.uniforms.uIntensity.value = 1.0;
+      }, 2000);
+    });
+  </script>
+</body>
+</html>

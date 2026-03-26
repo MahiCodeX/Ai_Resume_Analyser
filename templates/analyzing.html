@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Analyzing Resume</title>
+
+<style>
+
+body{
+background:#05070a;
+color:white;
+font-family:Arial;
+display:flex;
+justify-content:center;
+align-items:center;
+height:100vh;
+flex-direction:column;
+}
+
+.loader{
+width:80px;
+height:80px;
+border:6px solid #1a1a1a;
+border-top:6px solid #00e5a0;
+border-radius:50%;
+animation:spin 1s linear infinite;
+margin-bottom:30px;
+}
+
+@keyframes spin{
+0%{transform:rotate(0deg)}
+100%{transform:rotate(360deg)}
+}
+
+.status{
+font-size:20px;
+margin-top:10px;
+color:#00e5a0;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="loader"></div>
+
+<div id="status" class="status">Uploading resume...</div>
+
+<script>
+
+const messages = [
+"Parsing resume...",
+"Analyzing your skills...",
+"Checking project experience...",
+"Evaluating ATS score...",
+"Generating AI suggestions..."
+];
+
+let i = 0;
+
+setInterval(()=>{
+if(i < messages.length){
+document.getElementById("status").innerText = messages[i];
+i++;
+}
+},1500);
+
+setTimeout(()=>{
+window.location.href="/result";
+},8000);
+
+
+setTimeout(function(){
+    window.location.href="/result";
+}, 6000);
+
+
+
+</script>
+
+</body>
+</html>
