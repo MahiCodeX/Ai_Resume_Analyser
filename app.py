@@ -177,7 +177,9 @@ def result():
         suggestions=data["suggestions"],
         ml_result=data["ml_result"]
     )
-
+@app.route("/ping")
+def ping():
+    return "alive"
 
 # ====================================
 # Run App
